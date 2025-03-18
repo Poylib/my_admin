@@ -1,0 +1,104 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Full-Stack Expert Admin Page for Personal Blog
+
+## **Overview**
+This is a full-stack web application built using **Next.js 15 App Router** for managing a personal blog. The application allows administrators to manage blog posts, tags, images, social links, likes, and comments. The backend database is structured using relational tables to handle different entities such as posts, tags, images, and interactions like likes and comments.
+- use shadcn UI
+
+---
+
+## **Data Structure**
+
+
+1. posts (게시글)
+게시글의 기본 정보를 저장하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|-----------|
+| id | uuid | 게시글 고유 ID | Primary Key, Default: uuid_generate_v4() |
+| title | text | 게시글 제목 | Not Null |
+| content | text | 게시글 내용 | Not Null |
+| thumbnail_url | text | 썸네일 이미지 URL | Not Null |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+| updated_at | timestamptz | 수정일시 | Not Null, Default: now() |
+| author_id | uuid | 작성자 ID | Not Null, Foreign Key: auth.users(id) |
+| view_count | integer | 조회수 | Default: 0 |
+| is_published | boolean | 발행 여부 | Default: true |
+| slug | text | URL 슬러그 | Not Null, Unique |
+2. tags (태그)
+태그 정보를 저장하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|-----------|
+| id | uuid | 태그 고유 ID | Primary Key, Default: uuid_generate_v4() |
+| name | text | 태그 이름 | Not Null, Unique |
+| slug | text | URL 슬러그 | Not Null, Unique |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+3. post_tags (게시글-태그 연결)
+게시글과 태그의 다대다 관계를 관리하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|-----------|
+| post_id | uuid | 게시글 ID | Foreign Key: posts(id), On Delete: Cascade |
+| tag_id | uuid | 태그 ID | Foreign Key: tags(id), On Delete: Cascade |
+4. post_images (게시글 이미지)
+게시글에 포함된 이미지 정보를 저장하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|-----------|
+| id | uuid | 이미지 고유 ID | Primary Key, Default: uuid_generate_v4() |
+| post_id | uuid | 게시글 ID | Not Null, Foreign Key: posts(id), On Delete: Cascade |
+| image_url | text | 이미지 URL | Not Null |
+| caption | text | 이미지 설명 | Nullable |
+| order_index | integer | 이미지 순서 | Not Null |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+5. social_links (SNS 링크)
+SNS 계정 정보를 저장하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|-----------|
+| id | uuid | 링크 고유 ID | Primary Key, Default: uuid_generate_v4() |
+| platform | text | SNS 플랫폼 | Not Null |
+| url | text | SNS URL | Not Null |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+6. post_likes (좋아요)
+게시글 좋아요 정보를 저장하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|-----------|
+| post_id | uuid | 게시글 ID | Foreign Key: posts(id), On Delete: Cascade |
+| user_id | uuid | 사용자 ID | Foreign Key: auth.users(id), On Delete: Cascade |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+7. post_comments (댓글)
+게시글 댓글 정보를 저장하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|--------|------|------|-----------|
+| id | uuid | 댓글 고유 ID | Primary Key, Default: uuid_generate_v4() |
+| post_id | uuid | 게시글 ID | Not Null, Foreign Key: posts(id), On Delete: Cascade |
+| user_id | uuid | 작성자 ID | Not Null, Foreign Key: auth.users(id), On Delete: Cascade |
+| content | text | 댓글 내용 | Not Null |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+| updated_at | timestamptz | 수정일시 | Not Null, Default: now() |
+
+## **Commit Message Rules**  
+
+#### **📌 General Rules**  
+- Write commit messages in **English**.  
+- Follow the format: **`<Type>: <Message>`**  
+- Keep messages **clear and concise**.  
+
+#### **📌 Commit Message Types**  
+| Type     | Description |
+|----------|------------|
+| **Feature:** | Add a new feature |
+| **Fix:** | Fix a bug or issue |
+| **Chore:** | Maintenance tasks (e.g., updating dependencies) |
+| **Refactor:** | Code changes that don’t add features or fix bugs |
+| **Docs:** | Documentation updates |
+| **Style:** | Code style changes (formatting, missing semicolons, etc.) |
+| **Test:** | Adding or updating tests |
+
+#### **📌 Examples**  
+```bash
+git commit -m "Feature: Add image upload functionality"
+git commit -m "Fix: Resolve login issue on mobile devices"
+git commit -m "Chore: Update dependencies to latest versions"
