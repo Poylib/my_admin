@@ -3,13 +3,22 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { PostFormData } from '@/types/post';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
 export default function NewPostPage() {
   const router = useRouter();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [thumbnailUrl, setThumbnailUrl] = useState('');
-  const [isPublished, setIsPublished] = useState(true);
+  const [formData, setFormData] = useState<PostFormData>({
+    title: '',
+    content: '',
+    thumbnail_url: '',
+    is_published: true,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -17,7 +26,7 @@ export default function NewPostPage() {
     setIsSubmitting(true);
 
     try {
-      const slug = title
+      const slug = formData.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
@@ -31,12 +40,10 @@ export default function NewPostPage() {
       }
 
       const { error } = await supabase.from('posts').insert({
-        title,
-        content,
-        thumbnail_url: thumbnailUrl,
-        is_published: isPublished,
+        ...formData,
         slug,
         author_id: user.id,
+        view_count: 0,
       });
 
       if (error) throw error;
@@ -51,95 +58,88 @@ export default function NewPostPage() {
     }
   };
 
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">새 게시글 작성</h2>
+    <div className="container mx-auto py-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">새 게시글 작성</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">제목</Label>
+              <Input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label
-            htmlFor="title"
-            className="block text-sm font-medium text-gray-700"
-          >
-            제목
-          </label>
-          <input
-            type="text"
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="thumbnail_url">썸네일 URL</Label>
+              <Input
+                type="url"
+                id="thumbnail_url"
+                name="thumbnail_url"
+                value={formData.thumbnail_url}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-        <div>
-          <label
-            htmlFor="thumbnail"
-            className="block text-sm font-medium text-gray-700"
-          >
-            썸네일 URL
-          </label>
-          <input
-            type="url"
-            id="thumbnail"
-            value={thumbnailUrl}
-            onChange={(e) => setThumbnailUrl(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="content">내용</Label>
+              <Textarea
+                id="content"
+                name="content"
+                value={formData.content}
+                onChange={handleChange}
+                rows={10}
+                required
+              />
+            </div>
 
-        <div>
-          <label
-            htmlFor="content"
-            className="block text-sm font-medium text-gray-700"
-          >
-            내용
-          </label>
-          <textarea
-            id="content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={10}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_published"
+                checked={formData.is_published}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    is_published: checked === true,
+                  }))
+                }
+              />
+              <Label htmlFor="is_published">즉시 발행</Label>
+            </div>
 
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="isPublished"
-            checked={isPublished}
-            onChange={(e) => setIsPublished(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-          <label
-            htmlFor="isPublished"
-            className="ml-2 block text-sm text-gray-900"
-          >
-            즉시 발행
-          </label>
-        </div>
-
-        <div className="flex justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            취소
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {isSubmitting ? '저장 중...' : '저장'}
-          </button>
-        </div>
-      </form>
+            <div className="flex justify-end space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+              >
+                취소
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? '저장 중...' : '저장'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

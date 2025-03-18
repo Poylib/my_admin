@@ -3,41 +3,54 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  thumbnail_url: string;
-  is_published: boolean;
-}
+import { Post, PostFormData } from '@/types/post';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
 export default function EditPostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
+  const [formData, setFormData] = useState<PostFormData>({
+    title: '',
+    content: '',
+    thumbnail_url: '',
+    is_published: true,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    async function fetchPost() {
+    fetchPost();
+  }, [params.id]);
+
+  async function fetchPost() {
+    try {
       const { data, error } = await supabase
         .from('posts')
         .select('*')
         .eq('id', params.id)
         .single();
 
-      if (error) {
-        console.error('Error fetching post:', error);
-        router.push('/posts');
-        return;
-      }
+      if (error) throw error;
 
       setPost(data);
+      setFormData({
+        title: data.title,
+        content: data.content,
+        thumbnail_url: data.thumbnail_url,
+        is_published: data.is_published,
+      });
+    } catch (error) {
+      console.error('Error fetching post:', error);
+      router.push('/posts');
+    } finally {
       setIsLoading(false);
     }
-
-    fetchPost();
-  }, [params.id, router]);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +62,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
       const { error } = await supabase
         .from('posts')
         .update({
-          title: post.title,
-          content: post.content,
-          thumbnail_url: post.thumbnail_url,
-          is_published: post.is_published,
+          ...formData,
           updated_at: new Date().toISOString(),
         })
         .eq('id', post.id);
@@ -69,107 +79,96 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
     }
   };
 
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   if (isLoading) {
-    return <div>로딩 중...</div>;
+    return <div className="text-center p-4">로딩 중...</div>;
   }
 
   if (!post) {
-    return <div>게시글을 찾을 수 없습니다.</div>;
+    return <div className="text-center p-4">게시글을 찾을 수 없습니다.</div>;
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">게시글 수정</h2>
+    <div className="container mx-auto py-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">게시글 수정</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">제목</Label>
+              <Input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label
-            htmlFor="title"
-            className="block text-sm font-medium text-gray-700"
-          >
-            제목
-          </label>
-          <input
-            type="text"
-            id="title"
-            value={post.title}
-            onChange={(e) => setPost({ ...post, title: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="thumbnail_url">썸네일 URL</Label>
+              <Input
+                type="url"
+                id="thumbnail_url"
+                name="thumbnail_url"
+                value={formData.thumbnail_url}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-        <div>
-          <label
-            htmlFor="thumbnail"
-            className="block text-sm font-medium text-gray-700"
-          >
-            썸네일 URL
-          </label>
-          <input
-            type="url"
-            id="thumbnail"
-            value={post.thumbnail_url}
-            onChange={(e) =>
-              setPost({ ...post, thumbnail_url: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="content">내용</Label>
+              <Textarea
+                id="content"
+                name="content"
+                value={formData.content}
+                onChange={handleChange}
+                rows={10}
+                required
+              />
+            </div>
 
-        <div>
-          <label
-            htmlFor="content"
-            className="block text-sm font-medium text-gray-700"
-          >
-            내용
-          </label>
-          <textarea
-            id="content"
-            value={post.content}
-            onChange={(e) => setPost({ ...post, content: e.target.value })}
-            rows={10}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            required
-          />
-        </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_published"
+                checked={formData.is_published}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    is_published: checked === true,
+                  }))
+                }
+              />
+              <Label htmlFor="is_published">발행 상태</Label>
+            </div>
 
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="isPublished"
-            checked={post.is_published}
-            onChange={(e) =>
-              setPost({ ...post, is_published: e.target.checked })
-            }
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-          <label
-            htmlFor="isPublished"
-            className="ml-2 block text-sm text-gray-900"
-          >
-            발행 상태
-          </label>
-        </div>
-
-        <div className="flex justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            취소
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {isSubmitting ? '저장 중...' : '저장'}
-          </button>
-        </div>
-      </form>
+            <div className="flex justify-end space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+              >
+                취소
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? '저장 중...' : '저장'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

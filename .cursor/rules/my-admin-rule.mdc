@@ -9,8 +9,14 @@ alwaysApply: true
 ## **Overview**
 This is a full-stack web application built using **Next.js 15 App Router** for managing a personal blog. The application allows administrators to manage blog posts, tags, images, social links, likes, and comments. The backend database is structured using relational tables to handle different entities such as posts, tags, images, and interactions like likes and comments.
 - use shadcn UI
+## Using Shadcn with Latest Version
 
----
+When using **shadcn**, make sure to use the latest version by specifying `@latest`. For example, to add a button component, run the following command:
+
+```bash
+npx shadcn@latest add button
+```
+
 
 ## **Data Structure**
 
