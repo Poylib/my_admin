@@ -108,3 +108,5 @@ SNS 계정 정보를 저장하는 테이블
 git commit -m "Feature: Add image upload functionality"
 git commit -m "Fix: Resolve login issue on mobile devices"
 git commit -m "Chore: Update dependencies to latest versions"
+
+

@@ -1,71 +1,77 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Post, PostFormData } from '@/types/post';
+import { PostFormData } from '@/types/post';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import dynamic from 'next/dynamic';
+
+const MDEditor = dynamic(
+  () => import('@uiw/react-md-editor').then((mod) => mod.default),
+  { ssr: false },
+);
 
 export default function EditPostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [post, setPost] = useState<Post | null>(null);
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
     content: '',
     thumbnail_url: '',
     is_published: true,
   });
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const { data: post, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('id', params.id)
+          .single();
+
+        if (error) throw error;
+
+        setFormData({
+          title: post.title,
+          content: post.content,
+          thumbnail_url: post.thumbnail_url,
+          is_published: post.is_published,
+        });
+      } catch (error) {
+        console.error('Error fetching post:', error);
+        alert('게시글을 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchPost();
   }, [params.id]);
 
-  async function fetchPost() {
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('id', params.id)
-        .single();
-
-      if (error) throw error;
-
-      setPost(data);
-      setFormData({
-        title: data.title,
-        content: data.content,
-        thumbnail_url: data.thumbnail_url,
-        is_published: data.is_published,
-      });
-    } catch (error) {
-      console.error('Error fetching post:', error);
-      router.push('/posts');
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!post) return;
-
     setIsSubmitting(true);
 
     try {
+      const slug = formData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
       const { error } = await supabase
         .from('posts')
         .update({
           ...formData,
-          updated_at: new Date().toISOString(),
+          slug,
         })
-        .eq('id', post.id);
+        .eq('id', params.id);
 
       if (error) throw error;
 
@@ -79,22 +85,17 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]:
+        type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
   if (isLoading) {
-    return <div className="text-center p-4">로딩 중...</div>;
-  }
-
-  if (!post) {
-    return <div className="text-center p-4">게시글을 찾을 수 없습니다.</div>;
+    return <div>로딩 중...</div>;
   }
 
   return (
@@ -129,15 +130,17 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">내용</Label>
-              <Textarea
-                id="content"
-                name="content"
-                value={formData.content}
-                onChange={handleChange}
-                rows={10}
-                required
-              />
+              <Label>내용</Label>
+              <div data-color-mode="light">
+                <MDEditor
+                  value={formData.content}
+                  onChange={(value) =>
+                    setFormData((prev) => ({ ...prev, content: value || '' }))
+                  }
+                  height={400}
+                  preview="edit"
+                />
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -151,7 +154,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
                   }))
                 }
               />
-              <Label htmlFor="is_published">발행 상태</Label>
+              <Label htmlFor="is_published">발행</Label>
             </div>
 
             <div className="flex justify-end space-x-4">
