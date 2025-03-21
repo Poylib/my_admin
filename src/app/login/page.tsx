@@ -1,27 +1,25 @@
 'use client';
 
-import { Suspense } from 'react';
-import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 
 function LoginContent() {
-  const { user, signInWithGoogle } = useAuth();
+  const { signInWithGoogle } = useAuth();
+
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (user) {
-      const redirectTo = searchParams.get('redirectTo') || '/';
-      router.push(redirectTo);
+    if (!loading && user) {
+      router.push('/'); // 로그인 상태라면 직전 화면으로 리다이렉트
     }
-  }, [user, router, searchParams]);
+  }, [loading, user, router]);
 
   const handleSignIn = async () => {
-    const redirectTo = searchParams.get('redirectTo') || '/';
-    await signInWithGoogle(redirectTo);
+    await signInWithGoogle();
   };
 
   return (

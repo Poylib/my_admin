@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: (redirectTo?: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -53,14 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
-  const signInWithGoogle = async (redirectTo?: string) => {
+  const signInWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${
-            window.location.origin
-          }/auth/callback?redirectTo=${encodeURIComponent(redirectTo || '/')}`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
