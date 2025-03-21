@@ -1,177 +1,32 @@
-'use client';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { EditPostForm } from '@/components/posts/EditPostForm';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { PostFormData } from '@/types/post';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import dynamic from 'next/dynamic';
+type Props = {
+  params: Promise<{ id: string }>;
+};
 
-const MDEditor = dynamic(
-  () => import('@uiw/react-md-editor').then((mod) => mod.default),
-  { ssr: false },
-);
+export default async function EditPostPage({ params }: Props) {
+  const { id } = await params;
+  const supabase = createServerComponentClient({ cookies });
 
-export default function EditPostPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [formData, setFormData] = useState<PostFormData>({
-    title: '',
-    content: '',
-    thumbnail_url: '',
-    is_published: true,
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: post, error } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      try {
-        const { data: post, error } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('id', params.id)
-          .single();
+  if (error) {
+    return <div>게시글을 불러오는 중 오류가 발생했습니다.</div>;
+  }
 
-        if (error) throw error;
-
-        setFormData({
-          title: post.title,
-          content: post.content,
-          thumbnail_url: post.thumbnail_url,
-          is_published: post.is_published,
-        });
-      } catch (error) {
-        console.error('Error fetching post:', error);
-        alert('게시글을 불러오는 중 오류가 발생했습니다.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPost();
-  }, [params.id]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const slug = formData.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-
-      const { error } = await supabase
-        .from('posts')
-        .update({
-          ...formData,
-          slug,
-        })
-        .eq('id', params.id);
-
-      if (error) throw error;
-
-      router.push('/posts');
-      router.refresh();
-    } catch (error) {
-      console.error('Error updating post:', error);
-      alert('게시글 수정 중 오류가 발생했습니다.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    }));
-  };
-
-  if (isLoading) {
-    return <div>로딩 중...</div>;
+  if (!post) {
+    return <div>게시글을 찾을 수 없습니다.</div>;
   }
 
   return (
     <div className="container mx-auto py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">게시글 수정</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="title">제목</Label>
-              <Input
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="thumbnail_url">썸네일 URL</Label>
-              <Input
-                type="url"
-                id="thumbnail_url"
-                name="thumbnail_url"
-                value={formData.thumbnail_url}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>내용</Label>
-              <div data-color-mode="light">
-                <MDEditor
-                  value={formData.content}
-                  onChange={(value) =>
-                    setFormData((prev) => ({ ...prev, content: value || '' }))
-                  }
-                  height={400}
-                  preview="edit"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is_published"
-                checked={formData.is_published}
-                onCheckedChange={(checked) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    is_published: checked === true,
-                  }))
-                }
-              />
-              <Label htmlFor="is_published">발행</Label>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-              >
-                취소
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? '저장 중...' : '저장'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <EditPostForm post={post} />
     </div>
   );
 }
