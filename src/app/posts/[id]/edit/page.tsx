@@ -1,6 +1,6 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { EditPostForm } from '@/components/posts/EditPostForm';
+import { createClient } from '@/lib/supabase/server';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -8,7 +8,8 @@ type Props = {
 
 export default async function EditPostPage({ params }: Props) {
   const { id } = await params;
-  const supabase = createServerComponentClient({ cookies });
+
+  const supabase = await createClient();
 
   const { data: post, error } = await supabase
     .from('posts')
