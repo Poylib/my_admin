@@ -16,4 +16,5 @@ export interface PostFormData {
   content: string;
   thumbnail_url: string;
   is_published: boolean;
+  tags: string[];
 }

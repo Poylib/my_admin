@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { TagInput } from '@/components/posts/TagInput';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 const MDEditor = dynamic(
@@ -22,6 +23,7 @@ type EditPostFormProps = {
     content: string;
     thumbnail_url: string;
     is_published: boolean;
+    tags: string[];
   };
 };
 
@@ -32,6 +34,7 @@ export function EditPostForm({ post }: EditPostFormProps) {
     content: post.content,
     thumbnail_url: post.thumbnail_url,
     is_published: post.is_published,
+    tags: post.tags || [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const supabase = createClient();
@@ -46,15 +49,55 @@ export function EditPostForm({ post }: EditPostFormProps) {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-      const { error } = await supabase
+      const { error: postError } = await supabase
         .from('posts')
         .update({
-          ...formData,
+          title: formData.title,
+          content: formData.content,
+          thumbnail_url: formData.thumbnail_url,
+          is_published: formData.is_published,
           slug,
         })
         .eq('id', post.id);
 
-      if (error) throw error;
+      if (postError) throw postError;
+
+      const { error: deleteError } = await supabase
+        .from('post_tags')
+        .delete()
+        .eq('post_id', post.id);
+
+      if (deleteError) throw deleteError;
+
+      if (formData.tags.length > 0) {
+        const { error: tagsError } = await supabase.from('tags').upsert(
+          formData.tags.map((name) => ({
+            name,
+            slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          })),
+          { onConflict: 'name' },
+        );
+
+        if (tagsError) throw tagsError;
+
+        const { data: tagData, error: tagSelectError } = await supabase
+          .from('tags')
+          .select('id')
+          .in('name', formData.tags);
+
+        if (tagSelectError) throw tagSelectError;
+
+        const { error: postTagsError } = await supabase
+          .from('post_tags')
+          .insert(
+            tagData.map((tag) => ({
+              post_id: post.id,
+              tag_id: tag.id,
+            })),
+          );
+
+        if (postTagsError) throw postTagsError;
+      }
 
       router.push('/posts');
       router.refresh();
@@ -117,6 +160,14 @@ export function EditPostForm({ post }: EditPostFormProps) {
                 preview="edit"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>태그</Label>
+            <TagInput
+              tags={formData.tags}
+              onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
+            />
           </div>
 
           <div className="flex items-center space-x-2">

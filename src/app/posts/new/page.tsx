@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
+import { TagInput } from '@/components/posts/TagInput';
 
 const MDEditor = dynamic(
   () => import('@uiw/react-md-editor').then((mod) => mod.default),
@@ -23,6 +24,7 @@ export default function NewPostPage() {
     content: '',
     thumbnail_url: '',
     is_published: true,
+    tags: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const supabase = createClient();
@@ -44,14 +46,58 @@ export default function NewPostPage() {
         throw new Error('로그인이 필요합니다.');
       }
 
-      const { error } = await supabase.from('posts').insert({
-        ...formData,
-        slug,
-        author_id: user.id,
-        view_count: 0,
-      });
+      // 1. 게시글 생성
+      const { data: post, error: postError } = await supabase
+        .from('posts')
+        .insert({
+          title: formData.title,
+          content: formData.content,
+          thumbnail_url: formData.thumbnail_url,
+          is_published: formData.is_published,
+          slug,
+          author_id: user.id,
+          view_count: 0,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (postError) throw postError;
+
+      // 2. 태그 처리 (태그가 있는 경우에만)
+      if (formData.tags && formData.tags.length > 0) {
+        // 2-1. 태그 생성 또는 업데이트
+        const { error: tagsError } = await supabase.from('tags').upsert(
+          formData.tags.map((name) => ({
+            name,
+            slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          })),
+          { onConflict: 'name' },
+        );
+
+        if (tagsError) throw tagsError;
+
+        // 2-2. 생성된 태그의 ID 조회
+        const { data: tagData, error: tagSelectError } = await supabase
+          .from('tags')
+          .select('id, name')
+          .in('name', formData.tags);
+
+        if (tagSelectError) throw tagSelectError;
+
+        // 2-3. post_tags 관계 테이블에 데이터 삽입
+        if (tagData && tagData.length > 0) {
+          const { error: postTagsError } = await supabase
+            .from('post_tags')
+            .insert(
+              tagData.map((tag) => ({
+                post_id: post.id,
+                tag_id: tag.id,
+              })),
+            );
+
+          if (postTagsError) throw postTagsError;
+        }
+      }
 
       router.push('/posts');
       router.refresh();
@@ -115,6 +161,14 @@ export default function NewPostPage() {
                   preview="edit"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>태그</Label>
+              <TagInput
+                tags={formData.tags}
+                onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
+              />
             </div>
 
             <div className="flex items-center space-x-2">

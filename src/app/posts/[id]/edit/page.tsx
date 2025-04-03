@@ -1,23 +1,29 @@
-import { cookies } from 'next/headers';
 import { EditPostForm } from '@/components/posts/EditPostForm';
 import { createClient } from '@/lib/supabase/server';
 
 type Props = {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 };
 
 export default async function EditPostPage({ params }: Props) {
-  const { id } = await params;
-
   const supabase = await createClient();
-
-  const { data: post, error } = await supabase
+  // 게시글과 태그 정보를 함께 조회
+  const { data: post, error: postError } = await supabase
     .from('posts')
-    .select('*')
-    .eq('id', id)
+    .select(
+      `
+      *,
+      post_tags (
+        tags (
+          name
+        )
+      )
+    `,
+    )
+    .eq('id', params.id)
     .single();
 
-  if (error) {
+  if (postError) {
     return <div>게시글을 불러오는 중 오류가 발생했습니다.</div>;
   }
 
@@ -25,9 +31,22 @@ export default async function EditPostPage({ params }: Props) {
     return <div>게시글을 찾을 수 없습니다.</div>;
   }
 
+  // post_tags 관계를 통해 가져온 태그 이름들을 배열로 변환
+  const tags = post.post_tags?.map((pt: any) => pt.tags.name) || [];
+
+  // EditPostForm에 전달할 데이터 구성
+  const postWithTags = {
+    id: post.id,
+    title: post.title,
+    content: post.content,
+    thumbnail_url: post.thumbnail_url,
+    is_published: post.is_published,
+    tags: tags,
+  };
+
   return (
     <div className="container mx-auto py-6">
-      <EditPostForm post={post} />
+      <EditPostForm post={postWithTags} />
     </div>
   );
 }

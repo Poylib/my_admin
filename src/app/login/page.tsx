@@ -1,26 +1,25 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense } from 'react';
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useRouter } from 'next/navigation';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 function LoginContent() {
-  const { signInWithGoogle } = useAuth();
-
-  const { user, loading } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push('/'); // 로그인 상태라면 직전 화면으로 리다이렉트
+    if (user) {
+      const redirectTo = searchParams.get('redirectTo') || '/';
+      router.push(redirectTo);
     }
-  }, [loading, user, router]);
-
-  const handleSignIn = async () => {
-    await signInWithGoogle();
-  };
+  }, [user, router, searchParams]);
 
   return (
     <Card className="max-w-md mx-auto">
@@ -31,10 +30,15 @@ function LoginContent() {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center space-y-4">
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           <p className="text-center text-gray-600">
             구글 계정으로 로그인하여 관리자 페이지에 접근하세요.
           </p>
-          <Button onClick={handleSignIn} className="w-full">
+          <Button onClick={signInWithGoogle} className="w-full">
             구글로 로그인
           </Button>
         </div>

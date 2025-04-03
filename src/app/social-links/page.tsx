@@ -1,7 +1,7 @@
 'use client';
 
+import { createClient } from '@/lib/supabase/client';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 
 interface SocialLink {
   id: string;
@@ -21,6 +21,7 @@ export default function SocialLinksPage() {
   }, []);
 
   async function fetchLinks() {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('social_links')
       .select('*')
@@ -41,6 +42,7 @@ export default function SocialLinksPage() {
     setIsSubmitting(true);
 
     try {
+      const supabase = createClient();
       const { error } = await supabase.from('social_links').insert({
         platform: newPlatform.trim(),
         url: newUrl.trim(),
@@ -63,6 +65,7 @@ export default function SocialLinksPage() {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
+      const supabase = createClient();
       const { error } = await supabase
         .from('social_links')
         .delete()
