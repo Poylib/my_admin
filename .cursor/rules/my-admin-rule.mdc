@@ -20,84 +20,39 @@ npx shadcn@latest add button
 
 ## **Data Structure**
 
-다음은 마크다운 문서를 일반적인 글 형식으로 정리한 내용이야.  
+### 1. posts (게시글)
+게시글의 기본 정보를 저장하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|-----|---|---|-----|
+| id | uuid | 게시글 고유 ID | Primary Key, Default: uuid_generate_v4() |
+| title_ko | text | 한국어 제목 | Not Null |
+| title_en | text | 영어 제목 | Null 허용 |
+| content_ko | text | 한국어 내용 | Not Null |
+| content_en | text | 영어 내용 | Null 허용 |
+| thumbnail_url | text | 썸네일 이미지 URL | Not Null |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+| updated_at | timestamptz | 수정일시 | Not Null, Default: now() |
+| author_id | uuid | 작성자 ID | Not Null, Foreign Key: auth.users(id) |
+| view_count | integer | 조회수 | Default: 0 |
+| is_published | boolean | 발행 여부 | Default: true |
+| slug | text | URL 슬러그 | Not Null, Unique |
+| has_translation | boolean | 영어 번역 존재 여부 | Default: false |
 
----
+### 2. tags (태그)
+태그 정보를 저장하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|-----|---|---|-----|
+| id | uuid | 태그 고유 ID | Primary Key, Default: uuid_generate_v4() |
+| name_ko | text | 한국어 태그 이름 | Not Null, Unique |
+| name_en | text | 영어 태그 이름 | Null 허용, Unique |
+| slug | text | URL 슬러그 | Not Null, Unique |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
 
-### 1. 게시글 (posts)  
-게시글의 기본 정보를 저장하는 테이블이다.  
-
-- **id**: 게시글의 고유 ID (UUID, 기본값: `uuid_generate_v4()`, 기본 키)  
-- **title**: 게시글 제목 (필수 입력)  
-- **content**: 게시글 내용 (필수 입력)  
-- **thumbnail_url**: 썸네일 이미지 URL (필수 입력)  
-- **created_at**: 게시글 생성일시 (`timestamp with time zone`, 기본값: `now()`, 필수 입력)  
-- **updated_at**: 게시글 수정일시 (`timestamp with time zone`, 기본값: `now()`, 필수 입력)  
-- **author_id**: 작성자 ID (`uuid`, 필수 입력, `auth.users(id)`를 참조하는 외래 키)  
-- **view_count**: 조회수 (기본값: `0`)  
-- **is_published**: 게시글 발행 여부 (기본값: `true`)  
-- **slug**: 게시글의 URL 슬러그 (필수 입력, 유일 값)  
-
----
-
-### 2. 태그 (tags)  
-게시글에 사용될 태그 정보를 저장하는 테이블이다.  
-
-- **id**: 태그의 고유 ID (UUID, 기본값: `uuid_generate_v4()`, 기본 키)  
-- **name**: 태그 이름 (필수 입력, 유일 값)  
-- **slug**: 태그의 URL 슬러그 (필수 입력, 유일 값)  
-- **created_at**: 태그 생성일시 (`timestamp with time zone`, 기본값: `now()`, 필수 입력)  
-
----
-
-### 3. 게시글-태그 연결 (post_tags)  
-게시글과 태그 간의 다대다 관계를 관리하는 테이블이다.  
-
-- **post_id**: 게시글 ID (`posts(id)`를 참조하는 외래 키, 삭제 시 `Cascade`)  
-- **tag_id**: 태그 ID (`tags(id)`를 참조하는 외래 키, 삭제 시 `Cascade`)  
-
----
-
-### 4. 게시글 이미지 (post_images)  
-게시글에 포함된 이미지 정보를 저장하는 테이블이다.  
-
-- **id**: 이미지의 고유 ID (UUID, 기본값: `uuid_generate_v4()`, 기본 키)  
-- **post_id**: 게시글 ID (`posts(id)`를 참조하는 외래 키, 삭제 시 `Cascade`, 필수 입력)  
-- **image_url**: 이미지 URL (필수 입력)  
-- **caption**: 이미지 설명 (옵션)  
-- **order_index**: 이미지 순서 (필수 입력)  
-- **created_at**: 이미지 생성일시 (`timestamp with time zone`, 기본값: `now()`, 필수 입력)  
-
----
-
-### 5. SNS 링크 (social_links)  
-SNS 계정 정보를 저장하는 테이블이다.  
-
-- **id**: 링크의 고유 ID (UUID, 기본값: `uuid_generate_v4()`, 기본 키)  
-- **platform**: SNS 플랫폼 이름 (필수 입력)  
-- **url**: SNS URL (필수 입력)  
-- **created_at**: 링크 생성일시 (`timestamp with time zone`, 기본값: `now()`, 필수 입력)  
-
----
-
-### 6. 게시글 좋아요 (post_likes)  
-게시글에 대한 좋아요 정보를 저장하는 테이블이다.  
-
-- **post_id**: 게시글 ID (`posts(id)`를 참조하는 외래 키, 삭제 시 `Cascade`)  
-- **user_id**: 사용자 ID (`auth.users(id)`를 참조하는 외래 키, 삭제 시 `Cascade`)  
-- **created_at**: 좋아요 생성일시 (`timestamp with time zone`, 기본값: `now()`, 필수 입력)  
-
----
-
-### 7. 댓글 (post_comments)  
-게시글의 댓글 정보를 저장하는 테이블이다.  
-
-- **id**: 댓글의 고유 ID (UUID, 기본값: `uuid_generate_v4()`, 기본 키)  
-- **post_id**: 게시글 ID (`posts(id)`를 참조하는 외래 키, 삭제 시 `Cascade`, 필수 입력)  
-- **user_id**: 작성자 ID (`auth.users(id)`를 참조하는 외래 키, 삭제 시 `Cascade`, 필수 입력)  
-- **content**: 댓글 내용 (필수 입력)  
-- **created_at**: 댓글 생성일시 (`timestamp with time zone`, 기본값: `now()`, 필수 입력)  
-- **updated_at**: 댓글 수정일시 (`timestamp with time zone`, 기본값: `now()`, 필수 입력)  
-
----
+### 3. post_tags (게시글-태그 연결)
+게시글과 태그의 다대다 관계를 관리하는 테이블
+| 필드명 | 타입 | 설명 | 제약조건 |
+|-----|---|---|-----|
+| post_id | uuid | 게시글 ID | Primary Key, Foreign Key: posts(id), On Delete: Cascade |
+| tag_id | uuid | 태그 ID | Primary Key, Foreign Key: tags(id), On Delete: Cascade |
+| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
 

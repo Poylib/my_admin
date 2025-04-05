@@ -12,9 +12,12 @@ export interface Post {
 }
 
 export interface PostFormData {
-  title: string;
-  content: string;
+  title_ko: string;
+  title_en?: string;
+  content_ko: string;
+  content_en?: string;
   thumbnail_url: string;
   is_published: boolean;
   tags: string[];
+  has_translation: boolean;
 }
