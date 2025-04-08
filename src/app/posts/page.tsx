@@ -19,6 +19,7 @@ export default function PostsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
+
   useEffect(() => {
     fetchPosts();
   }, []);
@@ -74,13 +75,14 @@ export default function PostsPage() {
                 <TableHead>작성일</TableHead>
                 <TableHead>상태</TableHead>
                 <TableHead className="text-right">조회수</TableHead>
+                <TableHead className="text-right">번역</TableHead>
                 <TableHead className="text-right">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {posts.map((post) => (
                 <TableRow key={post.id}>
-                  <TableCell className="font-medium">{post.title}</TableCell>
+                  <TableCell className="font-medium">{post.title_ko}</TableCell>
                   <TableCell>
                     {new Date(post.created_at).toLocaleDateString()}
                   </TableCell>
@@ -97,6 +99,17 @@ export default function PostsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     {post.view_count}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        post.has_translation
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {post.has_translation ? '번역됨' : '번역 필요'}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button variant="outline" size="sm" asChild>

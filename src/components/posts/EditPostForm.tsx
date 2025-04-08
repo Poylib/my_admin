@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { TagInput } from '@/components/posts/TagInput';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const MDEditor = dynamic(
   () => import('@uiw/react-md-editor').then((mod) => mod.default),
   { ssr: false },
@@ -19,22 +20,29 @@ const MDEditor = dynamic(
 type EditPostFormProps = {
   post: {
     id: string;
-    title: string;
-    content: string;
+    title_ko: string;
+    title_en: string | null;
+    content_ko: string;
+    content_en: string | null;
     thumbnail_url: string;
     is_published: boolean;
     tags: string[];
+    has_translation: boolean;
   };
 };
 
 export function EditPostForm({ post }: EditPostFormProps) {
+  console.log('🚀 ~ EditPostForm ~ post:', post);
   const router = useRouter();
   const [formData, setFormData] = useState<PostFormData>({
-    title: post.title,
-    content: post.content,
+    title_ko: post.title_ko,
+    title_en: post.title_en || '',
+    content_ko: post.content_ko,
+    content_en: post.content_en || '',
     thumbnail_url: post.thumbnail_url,
     is_published: post.is_published,
     tags: post.tags || [],
+    has_translation: post.has_translation,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const supabase = createClient();
@@ -44,19 +52,26 @@ export function EditPostForm({ post }: EditPostFormProps) {
     setIsSubmitting(true);
 
     try {
-      const slug = formData.title
+      // 한국어 제목으로 슬러그 생성
+      const slug = formData.title_ko
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
+      // 번역 여부 확인 (영어 제목과 내용이 모두 있는 경우)
+      const has_translation = Boolean(formData.title_en && formData.content_en);
+
       const { error: postError } = await supabase
         .from('posts')
         .update({
-          title: formData.title,
-          content: formData.content,
+          title_ko: formData.title_ko,
+          title_en: formData.title_en || null,
+          content_ko: formData.content_ko,
+          content_en: formData.content_en || null,
           thumbnail_url: formData.thumbnail_url,
           is_published: formData.is_published,
           slug,
+          has_translation,
         })
         .eq('id', post.id);
 
@@ -70,29 +85,48 @@ export function EditPostForm({ post }: EditPostFormProps) {
       if (deleteError) throw deleteError;
 
       if (formData.tags.length > 0) {
-        const { error: tagsError } = await supabase.from('tags').upsert(
-          formData.tags.map((name) => ({
-            name,
-            slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          })),
-          { onConflict: 'name' },
-        );
+        // 태그 처리 로직 수정
+        const tagPromises = formData.tags.map(async (tagName) => {
+          // 먼저 태그가 존재하는지 확인
+          const { data: existingTag, error: findError } = await supabase
+            .from('tags')
+            .select('id')
+            .eq('name', tagName)
+            .single();
 
-        if (tagsError) throw tagsError;
+          if (findError && findError.code !== 'PGRST116') {
+            throw findError;
+          }
 
-        const { data: tagData, error: tagSelectError } = await supabase
-          .from('tags')
-          .select('id')
-          .in('name', formData.tags);
+          if (existingTag) {
+            // 태그가 이미 존재하면 해당 ID 반환
+            return existingTag.id;
+          } else {
+            // 태그가 없으면 새로 생성
+            const { data: newTag, error: insertError } = await supabase
+              .from('tags')
+              .insert({
+                name: tagName,
+                slug: tagName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+              })
+              .select('id')
+              .single();
 
-        if (tagSelectError) throw tagSelectError;
+            if (insertError) throw insertError;
+            return newTag.id;
+          }
+        });
 
+        // 모든 태그 처리 완료 대기
+        const tagIds = await Promise.all(tagPromises);
+
+        // post_tags 테이블에 연결
         const { error: postTagsError } = await supabase
           .from('post_tags')
           .insert(
-            tagData.map((tag) => ({
+            tagIds.map((tagId) => ({
               post_id: post.id,
-              tag_id: tag.id,
+              tag_id: tagId,
             })),
           );
 
@@ -126,13 +160,23 @@ export function EditPostForm({ post }: EditPostFormProps) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title">제목</Label>
+            <Label htmlFor="title_ko">한국어 제목</Label>
             <Input
-              id="title"
-              name="title"
-              value={formData.title}
+              id="title_ko"
+              name="title_ko"
+              value={formData.title_ko}
               onChange={handleChange}
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="title_en">영어 제목</Label>
+            <Input
+              id="title_en"
+              name="title_en"
+              value={formData.title_en || ''}
+              onChange={handleChange}
             />
           </div>
 
@@ -148,19 +192,42 @@ export function EditPostForm({ post }: EditPostFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>내용</Label>
-            <div data-color-mode="light">
-              <MDEditor
-                value={formData.content}
-                onChange={(value) =>
-                  setFormData((prev) => ({ ...prev, content: value || '' }))
-                }
-                height={400}
-                preview="edit"
-              />
-            </div>
-          </div>
+          <Tabs defaultValue="ko" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="ko">한국어 내용</TabsTrigger>
+              <TabsTrigger value="en">영어 내용</TabsTrigger>
+            </TabsList>
+            <TabsContent value="ko">
+              <div data-color-mode="light">
+                <MDEditor
+                  value={formData.content_ko}
+                  onChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      content_ko: value || '',
+                    }))
+                  }
+                  height={400}
+                  preview="edit"
+                />
+              </div>
+            </TabsContent>
+            <TabsContent value="en">
+              <div data-color-mode="light">
+                <MDEditor
+                  value={formData.content_en || ''}
+                  onChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      content_en: value || '',
+                    }))
+                  }
+                  height={400}
+                  preview="edit"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <div className="space-y-2">
             <Label>태그</Label>

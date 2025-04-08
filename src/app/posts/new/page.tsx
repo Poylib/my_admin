@@ -31,6 +31,7 @@ export default function NewPostPage() {
     tags: [],
     has_translation: false,
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const supabase = createClient();
@@ -80,10 +81,10 @@ export default function NewPostPage() {
         // 2-1. 태그 생성 또는 업데이트
         const { error: tagsError } = await supabase.from('tags').upsert(
           formData.tags.map((name) => ({
-            name_ko: name,
+            name: name,
             slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           })),
-          { onConflict: 'name_ko' },
+          { onConflict: 'name' },
         );
 
         if (tagsError) throw tagsError;
@@ -91,8 +92,8 @@ export default function NewPostPage() {
         // 2-2. 생성된 태그의 ID 조회
         const { data: tagData, error: tagSelectError } = await supabase
           .from('tags')
-          .select('id, name_ko')
-          .in('name_ko', formData.tags);
+          .select('id, name')
+          .in('name', formData.tags);
 
         if (tagSelectError) throw tagSelectError;
 
@@ -274,7 +275,7 @@ export default function NewPostPage() {
                   <Input
                     id="title_en"
                     name="title_en"
-                    value={formData.title_en}
+                    value={formData.title_en || ''}
                     onChange={handleChange}
                   />
                 </div>
@@ -282,7 +283,7 @@ export default function NewPostPage() {
                   <Label>Content (English)</Label>
                   <div data-color-mode="light">
                     <MDEditor
-                      value={formData.content_en}
+                      value={formData.content_en || ''}
                       onChange={(value) =>
                         setFormData((prev) => ({
                           ...prev,

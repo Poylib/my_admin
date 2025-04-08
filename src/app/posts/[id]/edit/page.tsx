@@ -37,11 +37,14 @@ export default async function EditPostPage({ params }: Props) {
   // EditPostForm에 전달할 데이터 구성
   const postWithTags = {
     id: post.id,
-    title: post.title,
-    content: post.content,
+    title_ko: post.title_ko,
+    title_en: post.title_en,
+    content_ko: post.content_ko,
+    content_en: post.content_en,
     thumbnail_url: post.thumbnail_url,
     is_published: post.is_published,
     tags: tags,
+    has_translation: post.has_translation,
   };
 
   return (

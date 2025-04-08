@@ -21,38 +21,34 @@ npx shadcn@latest add button
 ## **Data Structure**
 
 ### 1. posts (게시글)
-게시글의 기본 정보를 저장하는 테이블
-| 필드명 | 타입 | 설명 | 제약조건 |
-|-----|---|---|-----|
-| id | uuid | 게시글 고유 ID | Primary Key, Default: uuid_generate_v4() |
-| title_ko | text | 한국어 제목 | Not Null |
-| title_en | text | 영어 제목 | Null 허용 |
-| content_ko | text | 한국어 내용 | Not Null |
-| content_en | text | 영어 내용 | Null 허용 |
-| thumbnail_url | text | 썸네일 이미지 URL | Not Null |
-| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
-| updated_at | timestamptz | 수정일시 | Not Null, Default: now() |
-| author_id | uuid | 작성자 ID | Not Null, Foreign Key: auth.users(id) |
-| view_count | integer | 조회수 | Default: 0 |
-| is_published | boolean | 발행 여부 | Default: true |
-| slug | text | URL 슬러그 | Not Null, Unique |
-| has_translation | boolean | 영어 번역 존재 여부 | Default: false |
+게시글의 기본 정보를 저장하는 테이블입니다.
+
+- **id**: 게시글의 고유 ID (UUID, 기본값: `uuid_generate_v4()`, 기본 키)
+- **title_ko**: 한국어 제목 (텍스트, 필수 입력)
+- **title_en**: 영어 제목 (텍스트, 선택 입력)
+- **content_ko**: 한국어 내용 (텍스트, 필수 입력)
+- **content_en**: 영어 내용 (텍스트, 선택 입력)
+- **thumbnail_url**: 썸네일 이미지 URL (텍스트, 필수 입력)
+- **created_at**: 생성일시 (타임스탬프, 기본값: `now()`, 필수 입력)
+- **updated_at**: 수정일시 (타임스탬프, 기본값: `now()`, 필수 입력)
+- **author_id**: 작성자 ID (UUID, 외래 키: `auth.users(id)`, 필수 입력)
+- **view_count**: 조회수 (정수, 기본값: 0)
+- **is_published**: 발행 여부 (불리언, 기본값: true)
+- **slug**: URL 슬러그 (텍스트, 필수 입력, 고유값)
+- **has_translation**: 영어 번역 존재 여부 (불리언, 기본값: false)
 
 ### 2. tags (태그)
-태그 정보를 저장하는 테이블
-| 필드명 | 타입 | 설명 | 제약조건 |
-|-----|---|---|-----|
-| id | uuid | 태그 고유 ID | Primary Key, Default: uuid_generate_v4() |
-| name_ko | text | 한국어 태그 이름 | Not Null, Unique |
-| name_en | text | 영어 태그 이름 | Null 허용, Unique |
-| slug | text | URL 슬러그 | Not Null, Unique |
-| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+태그 정보를 저장하는 테이블입니다.
+
+- **id**: 태그의 고유 ID (UUID, 기본값: `uuid_generate_v4()`, 기본 키)
+- **name**: 태그 이름 (텍스트, 필수 입력, 고유값)
+- **slug**: URL 슬러그 (텍스트, 필수 입력, 고유값)
+- **created_at**: 생성일시 (타임스탬프, 기본값: `now()`, 필수 입력)
 
 ### 3. post_tags (게시글-태그 연결)
-게시글과 태그의 다대다 관계를 관리하는 테이블
-| 필드명 | 타입 | 설명 | 제약조건 |
-|-----|---|---|-----|
-| post_id | uuid | 게시글 ID | Primary Key, Foreign Key: posts(id), On Delete: Cascade |
-| tag_id | uuid | 태그 ID | Primary Key, Foreign Key: tags(id), On Delete: Cascade |
-| created_at | timestamptz | 생성일시 | Not Null, Default: now() |
+게시글과 태그의 다대다 관계를 관리하는 테이블입니다.
+
+- **post_id**: 게시글 ID (UUID, 외래 키: `posts(id)`, 기본 키, 삭제 시 연쇄 삭제)
+- **tag_id**: 태그 ID (UUID, 외래 키: `tags(id)`, 기본 키, 삭제 시 연쇄 삭제)
+- **created_at**: 생성일시 (타임스탬프, 기본값: `now()`, 필수 입력)
 
